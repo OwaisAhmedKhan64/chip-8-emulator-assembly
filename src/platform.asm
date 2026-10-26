@@ -209,25 +209,29 @@ platform_init:
     xor r8d, r8d                                 ; bMenu = FALSE
     call AdjustWindowRect
 
-    mov eax, [rsp + 32 + RECT.right]
-    sub eax, [rsp + 32 + RECT.left]              ; Adjusted Width
-    mov edx, [rsp + 32 + RECT.bottom]
-    sub edx, [rsp + 32 + RECT.top]               ; Adjusted Height
+    ; Save adjusted width & height in R12D and R13D (safe from RDX clobbering)
+    mov r12d, [rsp + 32 + RECT.right]
+    sub r12d, [rsp + 32 + RECT.left]             ; R12D = Total Window Frame Width
+    mov r13d, [rsp + 32 + RECT.bottom]
+    sub r13d, [rsp + 32 + RECT.top]              ; R13D = Total Window Frame Height
 
     ; 5. Create Window
-    xor ecx, ecx                                ; dwExStyle = 0
-    lea rdx, [class_name]                       ; lpClassName
-    mov r8, rsi                                 ; lpWindowName
-    mov r9d, (WS_OVERLAPPEDWINDOW | WS_VISIBLE) ; dwStyle
+    xor ecx, ecx                                 ; dwExStyle = 0
+    lea rdx, [class_name]                        ; lpClassName (RDX is now safe to set)
+    mov r8, rsi                                  ; lpWindowName
+    mov r9d, (WS_OVERLAPPEDWINDOW | WS_VISIBLE)  ; dwStyle
 
-    mov dword [rsp + 32], CW_USEDEFAULT          ; X
-    mov dword [rsp + 40], CW_USEDEFAULT          ; Y
-    mov dword [rsp + 48], eax                    ; nWidth
-    mov dword [rsp + 56], edx                    ; nHeight
+    mov eax, CW_USEDEFAULT
+    mov [rsp + 32], rax                          ; X
+    mov [rsp + 40], rax                          ; Y
+    movsxd rax, r12d
+    mov [rsp + 48], rax                          ; nWidth
+    movsxd rax, r13d
+    mov [rsp + 56], rax                          ; nHeight
     mov qword [rsp + 64], 0                      ; hWndParent
     mov qword [rsp + 72], 0                      ; hMenu
     mov rax, [rbx + PlatformState.hinstance]
-    mov [rsp + 80], rax                         ; hInstance
+    mov [rsp + 80], rax                          ; hInstance
     mov qword [rsp + 88], 0                      ; lpParam
     call CreateWindowExA
 
